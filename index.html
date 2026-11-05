@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FC 27 Market</title>
+<style>
+body{background:#101522;color:white;font-family:Arial;padding:18px}
+h1{color:#55e6a5}
+.card{background:#202b3d;padding:16px;border-radius:14px;margin:12px 0}
+input,button{padding:13px;border:0;border-radius:9px;margin:5px 0}
+input{width:90%;background:#edf1f7}
+button{background:#55e6a5;font-weight:bold}
+small{color:#aab7c9}
+</style>
+</head>
+<body>
+<h1>FC 27 MARKET</h1>
+<p>Détecteur de bonnes affaires - PS5</p>
+<div class="card">
+<h3>Mes joueurs surveillés</h3>
+<div id="players"></div>
+</div>
+<div class="card">
+<h3>Ajouter une recherche</h3>
+<input id="name" placeholder="Nom du joueur">
+<input id="usual" type="number" placeholder="Prix habituel">
+<input id="current" type="number" placeholder="Prix trouvé">
+<button onclick="add()">Analyser le prix</button>
+<p id="result"></p>
+</div>
+<script>
+let names=["Mbappé","Lamine Yamal","Dembélé","Vinícius Jr.","Raphinha"];
+function add(){
+let n=document.getElementById("name").value;
+let u=Number(document.getElementById("usual").value);
+let c=Number(document.getElementById("current").value);
+if(!n||!u||!c)return alert("Remplis les trois cases");
+let diff=Math.round((u-c)/u*100);
+document.getElementById("result").innerHTML=
+diff>=15?"🔥 BONNE AFFAIRE ! "+diff+"% moins cher":
+"Prix actuel : "+c.toLocaleString("fr-FR")+" crédits. Écart : "+diff+"%";
+}
+document.getElementById("players").innerHTML=
+names.map(n=>"<p>⚽ "+n+" <small> - Toutes versions</small></p>").join("");
+</script>
+</body>
+</html>
