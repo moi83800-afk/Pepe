@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -10,22 +11,34 @@ h1{color:#55e6a5}
 .card{background:#202b3d;padding:16px;border-radius:14px;margin:12px 0}
 input,button{padding:13px;border:0;border-radius:9px;margin:5px 0;box-sizing:border-box}
 input{width:100%;background:#edf1f7}
-button{background:#55e6a5;font-weight:bold}
+button{background:#55e6a5;font-weight:bold;cursor:pointer}
 .remove{background:#e65b65;color:white;margin-left:8px}
 .player{padding:10px;border-bottom:1px solid #445}
 small{color:#aab7c9}
 #result{font-weight:bold}
+.market-player{padding:12px;border-bottom:1px solid #445}
+.price{color:#55e6a5;font-weight:bold}
+.muted{color:#aab7c9}
+#status{font-size:13px;color:#aab7c9}
 </style>
 </head>
 <body>
+
 <h1>FC 27 MARKET</h1>
 <p>Détecteur de bonnes affaires - PS5</p>
 
 <div class="card">
+<h3>Marché FC 27</h3>
+<p id="status">Connexion au marché en cours...</p>
+<button onclick="loadMarket()">Actualiser les prix</button>
+</div>
+
+<div class="card">
 <h3>Rechercher un joueur</h3>
 <input id="name" placeholder="Ex : Mbappé, Yamal, Dembélé...">
-<button onclick="addPlayer()">Ajouter à ma liste</button>
-<p><small>Tu peux ajouter le joueur que tu veux.</small></p>
+<button onclick="searchMarket()">Chercher sur le marché</button>
+<div id="searchResults"></div>
+<p><small>La recherche utilise les joueurs présents dans les données de l'API.</small></p>
 </div>
 
 <div class="card">
@@ -43,65 +56,235 @@ small{color:#aab7c9}
 </div>
 
 <script>
-let players=JSON.parse(localStorage.getItem("fc27players")||"[]");
+const API_URL = "https://fc27-market.val.run/latest";
 
-function save(){
- localStorage.setItem("fc27players",JSON.stringify(players));
- show();
+let players = JSON.parse(localStorage.getItem("fc27players") || "[]");
+let marketPlayers = [];
+let marketUpdated = null;
+
+function formatPrice(price) {
+  if (price === null || price === undefined || price === 0) {
+    return "Prix indisponible";
+  }
+  return Number(price).toLocaleString("fr-FR") + " crédits";
 }
 
-function addPlayer(){
- let name=document.getElementById("name").value.trim();
- if(!name)return alert("Écris le nom du joueur");
- if(players.some(p=>p.toLowerCase()===name.toLowerCase()))
- return alert("Ce joueur est déjà dans ta liste");
- players.push(name);
- document.getElementById("name").value="";
- save();
+function normalize(text) {
+  return String(text || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
 }
 
-function removePlayer(index){
- players.splice(index,1);
- save();
+async function loadMarket() {
+  const status = document.getElementById("status");
+  status.textContent = "Chargement des données du marché...";
+
+  try {
+    const response = await fetch(API_URL);
+
+    if (!response.ok) {
+      throw new Error("Erreur HTTP " + response.status);
+    }
+
+    const data = await response.json();
+
+    marketPlayers = [];
+    marketUpdated = data.updated || null;
+
+    if (data.groups) {
+      Object.values(data.groups).forEach(group => {
+        if (Array.isArray(group)) {
+          marketPlayers.push(...group);
+        }
+      });
+    }
+
+    status.textContent =
+      marketPlayers.length + " joueurs chargés. " +
+      (marketUpdated
+        ? "Dernière mise à jour : " +
+          new Date(marketUpdated).toLocaleString("fr-FR")
+        : "");
+
+    show();
+  } catch (error) {
+    console.error(error);
+    status.textContent =
+      "Impossible de charger le marché. Vérifie ta connexion ou réessaie plus tard.";
+  }
 }
 
-function show(){
- let box=document.getElementById("players");
- if(players.length===0){
- box.innerHTML="<p>Aucun joueur ajouté pour le moment.</p>";
- return;
- }
- box.innerHTML=players.map((p,i)=>
- '<div class="player">⚽ '+escapeHTML(p)+
- ' <button class="remove" onclick="removePlayer('+i+')">Supprimer</button></div>'
- ).join("");
+function findPlayer(name) {
+  const query = normalize(name);
+  if (!query) return null;
+
+  return marketPlayers.find(p => normalize(p.name) === query)
+    || marketPlayers.find(p => normalize(p.name).includes(query))
+    || null;
 }
 
-function escapeHTML(s){
- return s.replace(/[&<>"']/g,c=>({
- '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
- }[c]));
+function searchMarket() {
+  const name = document.getElementById("name").value.trim();
+  const results = document.getElementById("searchResults");
+
+  results.innerHTML = "";
+
+  if (!name) {
+    results.textContent = "Écris le nom d'un joueur.";
+    return;
+  }
+
+  const query = normalize(name);
+
+  const matches = marketPlayers
+    .filter(p => normalize(p.name).includes(query))
+    .slice(0, 10);
+
+  if (matches.length === 0) {
+    results.textContent =
+      "Aucun joueur trouvé dans les données de l'API.";
+    return;
+  }
+
+  matches.forEach(player => {
+    const div = document.createElement("div");
+    div.className = "market-player";
+
+    const info = document.createElement("div");
+    info.innerHTML =
+      "<strong>" + escapeHTML(player.name) + "</strong> " +
+      " | Note : " + escapeHTML(player.rating) +
+      "<br><span class='price'>" +
+      escapeHTML(formatPrice(player.price)) +
+      "</span>";
+
+    const button = document.createElement("button");
+    button.textContent = "Ajouter à ma liste";
+    button.onclick = () => {
+      addPlayer(player.name);
+    };
+
+    div.appendChild(info);
+    div.appendChild(button);
+    results.appendChild(div);
+  });
 }
 
-function analyse(){
- let n=document.getElementById("analyseName").value.trim();
- let u=Number(document.getElementById("usual").value);
- let c=Number(document.getElementById("current").value);
- let result=document.getElementById("result");
- if(!n||u<=0||c<=0){
- result.textContent="Remplis les trois cases correctement.";
- return;
- }
- let diff=Math.round((u-c)/u*100);
- if(diff>=15){
- result.textContent="🔥 BONNE AFFAIRE ! "+n+" est "+diff+"% moins cher.";
- }else{
- result.textContent="Prix trouvé : "+c.toLocaleString("fr-FR")+
- " crédits. Écart : "+diff+"%.";
- }
+function save() {
+  localStorage.setItem("fc27players", JSON.stringify(players));
+  show();
+}
+
+function addPlayer(nameFromMarket) {
+  const name = nameFromMarket ||
+    document.getElementById("name").value.trim();
+
+  if (!name) {
+    alert("Écris le nom du joueur");
+    return;
+  }
+
+  if (players.some(p => normalize(p) === normalize(name))) {
+    alert("Ce joueur est déjà dans ta liste");
+    return;
+  }
+
+  players.push(name);
+  document.getElementById("name").value = "";
+  document.getElementById("searchResults").innerHTML = "";
+  save();
+}
+
+function removePlayer(index) {
+  players.splice(index, 1);
+  save();
+}
+
+function show() {
+  const box = document.getElementById("players");
+
+  if (players.length === 0) {
+    box.innerHTML = "<p>Aucun joueur ajouté pour le moment.</p>";
+    return;
+  }
+
+  box.innerHTML = "";
+
+  players.forEach((name, index) => {
+    const div = document.createElement("div");
+    div.className = "player";
+
+    const marketPlayer = findPlayer(name);
+
+    const info = document.createElement("div");
+    info.innerHTML = "⚽ <strong>" + escapeHTML(name) + "</strong>";
+
+    if (marketPlayer) {
+      info.innerHTML +=
+        "<br><span class='price'>" +
+        escapeHTML(formatPrice(marketPlayer.price)) +
+        "</span>" +
+        "<br><small>Note : " +
+        escapeHTML(marketPlayer.rating) +
+        (marketPlayer.pct_7d !== undefined
+          ? " | Évolution 7 jours : " +
+            escapeHTML(marketPlayer.pct_7d) + "%"
+          : "") +
+        "</small>";
+    } else {
+      info.innerHTML +=
+        "<br><small>Joueur non présent dans les données de l'API.</small>";
+    }
+
+    const button = document.createElement("button");
+    button.className = "remove";
+    button.textContent = "Supprimer";
+    button.onclick = () => removePlayer(index);
+
+    div.appendChild(info);
+    div.appendChild(button);
+    box.appendChild(div);
+  });
+}
+
+function escapeHTML(value) {
+  return String(value ?? "").replace(/[&<>"']/g, c => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  }[c]));
+}
+
+function analyse() {
+  const n = document.getElementById("analyseName").value.trim();
+  const u = Number(document.getElementById("usual").value);
+  const c = Number(document.getElementById("current").value);
+  const result = document.getElementById("result");
+
+  if (!n || u <= 0 || c <= 0) {
+    result.textContent = "Remplis les trois cases correctement.";
+    return;
+  }
+
+  const diff = Math.round((u - c) / u * 100);
+
+  if (diff >= 15) {
+    result.textContent =
+      "🔥 BONNE AFFAIRE ! " + n + " est " + diff + "% moins cher.";
+  } else {
+    result.textContent =
+      "Prix trouvé : " + c.toLocaleString("fr-FR") +
+      " crédits. Écart : " + diff + "%.";
+  }
 }
 
 show();
+loadMarket();
 </script>
+
 </body>
 </html>
