@@ -4,287 +4,556 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>FC 27 Market</title>
+<meta name="theme-color" content="#101522">
+<title>FC 27 MARKET PRO</title>
 <style>
-body{background:#101522;color:white;font-family:Arial;padding:18px}
-h1{color:#55e6a5}
-.card{background:#202b3d;padding:16px;border-radius:14px;margin:12px 0}
-input,button{padding:13px;border:0;border-radius:9px;margin:5px 0;box-sizing:border-box}
-input{width:100%;background:#edf1f7}
-button{background:#55e6a5;font-weight:bold;cursor:pointer}
-.remove{background:#e65b65;color:white;margin-left:8px}
-.player{padding:10px;border-bottom:1px solid #445}
-small{color:#aab7c9}
-#result{font-weight:bold}
-.market-player{padding:12px;border-bottom:1px solid #445}
-.price{color:#55e6a5;font-weight:bold}
-.muted{color:#aab7c9}
-#status{font-size:13px;color:#aab7c9}
+:root{
+  --bg:#101522;
+  --card:#202b3d;
+  --green:#55e6a5;
+  --muted:#aab7c9;
+  --red:#ff6875;
+  --blue:#55b9ff;
+  --border:#3b4a60;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;padding:18px;
+  background:var(--bg);color:white;
+  font-family:Arial,sans-serif;
+}
+h1{color:var(--green);font-size:35px;margin-bottom:5px}
+h2{font-size:22px;margin-top:0}
+h3{font-size:19px}
+p{line-height:1.5}
+.card{
+  background:var(--card);
+  padding:17px;border-radius:17px;
+  margin:14px 0;
+}
+input,select,button{
+  width:100%;padding:14px;
+  border:0;border-radius:10px;
+  margin:6px 0;font-size:15px;
+}
+input,select{background:#edf1f7;color:#111}
+button{
+  background:var(--green);
+  color:#092319;font-weight:bold;
+  cursor:pointer;
+}
+button.secondary{background:#34465e;color:white}
+button.danger{background:var(--red);color:white}
+button.small{width:auto;padding:9px 12px}
+.muted{color:var(--muted)}
+.price{color:var(--green);font-weight:bold}
+.red{color:var(--red)}
+.blue{color:var(--blue)}
+.green{color:var(--green)}
+.status{
+  background:#172235;padding:12px;
+  border-radius:10px;color:var(--muted);
+  font-size:13px;line-height:1.6;
+}
+.tabs{
+  display:flex;gap:7px;overflow-x:auto;
+  margin:15px 0;
+}
+.tabs button{min-width:105px;white-space:nowrap}
+.tabs button.active{background:#fff;color:#101522}
+.player{
+  display:flex;gap:12px;align-items:center;
+  padding:12px 0;border-bottom:1px solid var(--border);
+}
+.player img{
+  width:65px;height:90px;object-fit:contain;
+  border-radius:7px;
+}
+.player-info{flex:1;min-width:0}
+.player-info strong{font-size:15px}
+.player-info small{display:block;color:var(--muted);margin-top:5px}
+.player-actions{width:100px;flex-shrink:0}
+.player-actions button{font-size:12px;padding:9px 5px}
+.rank{font-size:19px;font-weight:bold;color:var(--green);width:28px}
+.badge{
+  display:inline-block;padding:5px 8px;
+  border-radius:7px;font-size:11px;
+  background:#34465e;margin-top:5px;
+}
+.buy{background:#174c3b;color:#7dffc5}
+.sell{background:#572b38;color:#ff9ba7}
+.hold{background:#38465c;color:#d2dceb}
+.hidden{display:none}
+.stats{
+  display:grid;grid-template-columns:1fr 1fr;
+  gap:10px;margin-top:12px;
+}
+.stat{
+  background:#172235;padding:12px;
+  border-radius:10px;
+}
+.stat strong{display:block;font-size:19px;margin-top:5px}
+canvas{
+  width:100%;height:190px;
+  background:#172235;border-radius:10px;
+}
+hr{border:0;border-top:1px solid var(--border);margin:15px 0}
+.footer{text-align:center;color:var(--muted);font-size:12px;padding:20px}
 </style>
 </head>
 <body>
 
-<h1>FC 27 MARKET</h1>
-<p>Détecteur de bonnes affaires - PS5</p>
+<header>
+  <h1>FC 27 MARKET</h1>
+  <p>ULTIMATE TEAM • PS5 • TRADING PRO</p>
+</header>
 
 <div class="card">
-<h3>Marché FC 27</h3>
-<p id="status">Connexion au marché en cours...</p>
-<button onclick="loadMarket()">Actualiser les prix</button>
+  <h2>📡 Marché en direct</h2>
+  <div id="status" class="status">Connexion au marché...</div>
+  <div class="stats">
+    <div class="stat">
+      <span class="muted">Joueurs chargés</span>
+      <strong id="total">0</strong>
+    </div>
+    <div class="stat">
+      <span class="muted">Favoris</span>
+      <strong id="favoriteCount">0</strong>
+    </div>
+  </div>
+  <button onclick="loadMarket()">↻ Actualiser les données</button>
 </div>
 
-<div class="card">
-<h3>Rechercher un joueur</h3>
-<input id="name" placeholder="Ex : Mbappé, Yamal, Dembélé...">
-<button onclick="searchMarket()">Chercher sur le marché</button>
-<div id="searchResults"></div>
-<p><small>La recherche utilise les joueurs présents dans les données de l'API.</small></p>
+<div class="tabs">
+  <button class="active" onclick="showTab('home',this)">Accueil</button>
+  <button onclick="showTab('search',this)">Recherche</button>
+  <button onclick="showTab('drops',this)">Baisses</button>
+  <button onclick="showTab('rises',this)">Hausses</button>
+  <button onclick="showTab('favorites',this)">Favoris</button>
+  <button onclick="showTab('calculator',this)">Calculateur</button>
 </div>
 
-<div class="card">
-<h3>Mes joueurs surveillés</h3>
-<div id="players"></div>
-</div>
+<section id="home">
+  <div class="card">
+    <h2>🔥 TOP 20 — Meilleures baisses</h2>
+    <p class="muted">Joueurs ayant les plus fortes baisses sur 7 jours.</p>
+    <div id="topDrops">Chargement...</div>
+    <button class="secondary" onclick="showTab('drops')">Voir toutes les baisses</button>
+  </div>
 
-<div class="card">
-<h3>Analyser un prix</h3>
-<input id="analyseName" placeholder="Nom du joueur">
-<input id="usual" type="number" placeholder="Prix habituel en crédits">
-<input id="current" type="number" placeholder="Prix trouvé en crédits">
-<button onclick="analyse()">Analyser le prix</button>
-<p id="result"></p>
+  <div class="card">
+    <h2>📈 TOP 20 — Plus fortes hausses</h2>
+    <p class="muted">Joueurs ayant les plus fortes hausses sur 7 jours.</p>
+    <div id="topRises">Chargement...</div>
+    <button class="secondary" onclick="showTab('rises')">Voir toutes les hausses</button>
+  </div>
+
+  <div class="card">
+    <h2>⭐ Mes joueurs surveillés</h2>
+    <div id="homeFavorites"></div>
+    <button class="secondary" onclick="showTab('favorites')">Gérer mes favoris</button>
+  </div>
+</section>
+
+<section id="search" class="hidden">
+  <div class="card">
+    <h2>🔎 Rechercher un joueur</h2>
+    <input id="searchInput" placeholder="Ex : Mbappé, Pacho, Ronaldo...">
+    <button onclick="searchPlayers()">Rechercher</button>
+    <div id="searchResults"></div>
+  </div>
+</section>
+
+<section id="drops" class="hidden">
+  <div class="card">
+    <h2>📉 Les plus fortes baisses</h2>
+    <div id="allDrops"></div>
+  </div>
+</section>
+
+<section id="rises" class="hidden">
+  <div class="card">
+    <h2>🚀 Les plus fortes hausses</h2>
+    <div id="allRises"></div>
+  </div>
+</section>
+
+<section id="favorites" class="hidden">
+  <div class="card">
+    <h2>⭐ Ma liste de surveillance</h2>
+    <div id="favoriteList"></div>
+  </div>
+</section>
+
+<section id="calculator" class="hidden">
+  <div class="card">
+    <h2>💰 Calculateur de trading</h2>
+    <p class="muted">Estime ton bénéfice après achat et revente.</p>
+    <label>Prix d'achat</label>
+    <input id="buyPrice" type="number" placeholder="Ex : 100000">
+    <label>Prix de revente</label>
+    <input id="sellPrice" type="number" placeholder="Ex : 130000">
+    <button onclick="calculateProfit()">Calculer mon bénéfice</button>
+    <div id="profitResult"></div>
+  </div>
+</section>
+
+<section id="details" class="hidden">
+  <div class="card">
+    <button class="secondary" onclick="backFromDetails()">← Retour</button>
+    <div id="playerDetails"></div>
+  </div>
+</section>
+
+<div class="footer">
+  FC 27 MARKET PRO • Données fournies par l'API de marché<br>
+  Les prix et prévisions ne garantissent aucun bénéfice.
 </div>
 
 <script>
-const API_URL = "https://fc27-market.val.run/latest";
+const API = "https://fc27-market.val.run";
+let market = [];
+let favorites = JSON.parse(localStorage.getItem("fc27favorites") || "[]");
+let currentPlayer = null;
+let previousTab = "home";
 
-let players = JSON.parse(localStorage.getItem("fc27players") || "[]");
-let marketPlayers = [];
-let marketUpdated = null;
+const $ = id => document.getElementById(id);
 
-function formatPrice(price) {
-  if (price === null || price === undefined || price === 0) {
-    return "Prix indisponible";
-  }
-  return Number(price).toLocaleString("fr-FR") + " crédits";
-}
-
-function normalize(text) {
-  return String(text || "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .trim();
-}
-
-async function loadMarket() {
-  const status = document.getElementById("status");
-  status.textContent = "Chargement des données du marché...";
-
-  try {
-    const response = await fetch(API_URL);
-
-    if (!response.ok) {
-      throw new Error("Erreur HTTP " + response.status);
-    }
-
-    const data = await response.json();
-
-    marketPlayers = [];
-    marketUpdated = data.updated || null;
-
-    if (data.groups) {
-      Object.values(data.groups).forEach(group => {
-        if (Array.isArray(group)) {
-          marketPlayers.push(...group);
-        }
-      });
-    }
-
-    status.textContent =
-      marketPlayers.length + " joueurs chargés. " +
-      (marketUpdated
-        ? "Dernière mise à jour : " +
-          new Date(marketUpdated).toLocaleString("fr-FR")
-        : "");
-
-    show();
-  } catch (error) {
-    console.error(error);
-    status.textContent =
-      "Impossible de charger le marché. Vérifie ta connexion ou réessaie plus tard.";
-  }
-}
-
-function findPlayer(name) {
-  const query = normalize(name);
-  if (!query) return null;
-
-  return marketPlayers.find(p => normalize(p.name) === query)
-    || marketPlayers.find(p => normalize(p.name).includes(query))
-    || null;
-}
-
-function searchMarket() {
-  const name = document.getElementById("name").value.trim();
-  const results = document.getElementById("searchResults");
-
-  results.innerHTML = "";
-
-  if (!name) {
-    results.textContent = "Écris le nom d'un joueur.";
-    return;
-  }
-
-  const query = normalize(name);
-
-  const matches = marketPlayers
-    .filter(p => normalize(p.name).includes(query))
-    .slice(0, 10);
-
-  if (matches.length === 0) {
-    results.textContent =
-      "Aucun joueur trouvé dans les données de l'API.";
-    return;
-  }
-
-  matches.forEach(player => {
-    const div = document.createElement("div");
-    div.className = "market-player";
-
-    const info = document.createElement("div");
-    info.innerHTML =
-      "<strong>" + escapeHTML(player.name) + "</strong> " +
-      " | Note : " + escapeHTML(player.rating) +
-      "<br><span class='price'>" +
-      escapeHTML(formatPrice(player.price)) +
-      "</span>";
-
-    const button = document.createElement("button");
-    button.textContent = "Ajouter à ma liste";
-    button.onclick = () => {
-      addPlayer(player.name);
-    };
-
-    div.appendChild(info);
-    div.appendChild(button);
-    results.appendChild(div);
-  });
-}
-
-function save() {
-  localStorage.setItem("fc27players", JSON.stringify(players));
-  show();
-}
-
-function addPlayer(nameFromMarket) {
-  const name = nameFromMarket ||
-    document.getElementById("name").value.trim();
-
-  if (!name) {
-    alert("Écris le nom du joueur");
-    return;
-  }
-
-  if (players.some(p => normalize(p) === normalize(name))) {
-    alert("Ce joueur est déjà dans ta liste");
-    return;
-  }
-
-  players.push(name);
-  document.getElementById("name").value = "";
-  document.getElementById("searchResults").innerHTML = "";
-  save();
-}
-
-function removePlayer(index) {
-  players.splice(index, 1);
-  save();
-}
-
-function show() {
-  const box = document.getElementById("players");
-
-  if (players.length === 0) {
-    box.innerHTML = "<p>Aucun joueur ajouté pour le moment.</p>";
-    return;
-  }
-
-  box.innerHTML = "";
-
-  players.forEach((name, index) => {
-    const div = document.createElement("div");
-    div.className = "player";
-
-    const marketPlayer = findPlayer(name);
-
-    const info = document.createElement("div");
-    info.innerHTML = "⚽ <strong>" + escapeHTML(name) + "</strong>";
-
-    if (marketPlayer) {
-      info.innerHTML +=
-        "<br><span class='price'>" +
-        escapeHTML(formatPrice(marketPlayer.price)) +
-        "</span>" +
-        "<br><small>Note : " +
-        escapeHTML(marketPlayer.rating) +
-        (marketPlayer.pct_7d !== undefined
-          ? " | Évolution 7 jours : " +
-            escapeHTML(marketPlayer.pct_7d) + "%"
-          : "") +
-        "</small>";
-    } else {
-      info.innerHTML +=
-        "<br><small>Joueur non présent dans les données de l'API.</small>";
-    }
-
-    const button = document.createElement("button");
-    button.className = "remove";
-    button.textContent = "Supprimer";
-    button.onclick = () => removePlayer(index);
-
-    div.appendChild(info);
-    div.appendChild(button);
-    box.appendChild(div);
-  });
-}
-
-function escapeHTML(value) {
-  return String(value ?? "").replace(/[&<>"']/g, c => ({
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    '"': "&quot;",
-    "'": "&#39;"
+function esc(v){
+  return String(v ?? "").replace(/[&<>"']/g,c=>({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
   }[c]));
 }
 
-function analyse() {
-  const n = document.getElementById("analyseName").value.trim();
-  const u = Number(document.getElementById("usual").value);
-  const c = Number(document.getElementById("current").value);
-  const result = document.getElementById("result");
+function money(v){
+  return Number(v || 0).toLocaleString("fr-FR") + " crédits";
+}
 
-  if (!n || u <= 0 || c <= 0) {
-    result.textContent = "Remplis les trois cases correctement.";
-    return;
+function normalize(v){
+  return String(v || "").normalize("NFD")
+    .replace(/[\u0300-\u036f]/g,"").toLowerCase().trim();
+}
+
+function variation(p){
+  const n = Number(p.pct_7d);
+  return Number.isFinite(n) ? n : null;
+}
+
+function variationHTML(p){
+  const n = variation(p);
+  if(n === null) return '<span class="muted">Évolution inconnue</span>';
+  return '<span class="' + (n < 0 ? "red" : n > 0 ? "green" : "muted") + '">' +
+    (n > 0 ? "+" : "") + n.toLocaleString("fr-FR") + "% / 7 jours</span>";
+}
+
+function signalHTML(p){
+  const s = String(p.signal || "").toLowerCase();
+  let label = p.signal || "Non indiqué";
+  let cls = "hold";
+  if(s.includes("buy") || s.includes("achat")) {
+    label = "ACHETER"; cls = "buy";
+  } else if(s.includes("sell") || s.includes("vente")) {
+    label = "VENDRE"; cls = "sell";
+  } else if(s.includes("hold") || s.includes("garder")) {
+    label = "GARDER"; cls = "hold";
   }
+  return '<span class="badge ' + cls + '">' + esc(label) + '</span>';
+}
 
-  const diff = Math.round((u - c) / u * 100);
+async function loadMarket(){
+  $("status").textContent = "Récupération des données...";
+  try{
+    const response = await fetch(API + "/latest");
+    if(!response.ok) throw new Error("HTTP " + response.status);
+    const data = await response.json();
 
-  if (diff >= 15) {
-    result.textContent =
-      "🔥 BONNE AFFAIRE ! " + n + " est " + diff + "% moins cher.";
-  } else {
-    result.textContent =
-      "Prix trouvé : " + c.toLocaleString("fr-FR") +
-      " crédits. Écart : " + diff + "%.";
+    market = [];
+    if(data.groups){
+      Object.values(data.groups).forEach(group=>{
+        if(Array.isArray(group)) market.push(...group);
+      });
+    }
+
+    // Élimine les éventuels doublons
+    const unique = new Map();
+    market.forEach(p=>{
+      if(p.eaId !== undefined) unique.set(String(p.eaId),p);
+      else unique.set(normalize(p.name),p);
+    });
+    market = [...unique.values()];
+
+    $("total").textContent = market.length;
+    $("favoriteCount").textContent = favorites.length;
+
+    const date = data.updated ? new Date(data.updated) : null;
+    const age = date ? (Date.now()-date.getTime())/3600000 : Infinity;
+
+    $("status").textContent =
+      market.length + " joueurs disponibles • Mise à jour : " +
+      (date ? date.toLocaleString("fr-FR") : "inconnue") +
+      (age > 48 ? " • ⚠️ Données anciennes" : " • ✓ Données récentes");
+
+    renderRankings();
+    renderFavorites();
+  }catch(error){
+    console.error(error);
+    $("status").textContent =
+      "Connexion impossible. Vérifie ta connexion Internet et réessaie.";
   }
 }
 
-show();
+function playerRow(p,index,showRank=false){
+  const div = document.createElement("div");
+  div.className = "player";
+
+  if(showRank){
+    const rank = document.createElement("div");
+    rank.className = "rank";
+    rank.textContent = "#" + (index+1);
+    div.appendChild(rank);
+  }
+
+  if(p.image){
+    const img = document.createElement("img");
+    img.src = p.image;
+    img.alt = p.name || "Carte joueur";
+    img.loading = "lazy";
+    img.onerror = ()=>img.style.display="none";
+    div.appendChild(img);
+  }
+
+  const info = document.createElement("div");
+  info.className = "player-info";
+  info.innerHTML =
+    "<strong>" + esc(p.name) + "</strong>" +
+    "<small>Note : " + esc(p.rating ?? "—") + "</small>" +
+    '<div class="price">' + money(p.price) + "</div>" +
+    "<small>" + variationHTML(p) + "</small>" +
+    signalHTML(p);
+
+  const actions = document.createElement("div");
+  actions.className = "player-actions";
+
+  const details = document.createElement("button");
+  details.className = "secondary";
+  details.textContent = "Détails";
+  details.onclick = ()=>openDetails(p);
+
+  const fav = document.createElement("button");
+  fav.textContent = isFavorite(p) ? "★ Suivi" : "☆ Suivre";
+  fav.onclick = ()=>toggleFavorite(p);
+
+  actions.append(details,fav);
+  div.append(info,actions);
+  return div;
+}
+
+function renderList(container,items,rank=false){
+  const box = $(container);
+  box.innerHTML = "";
+  if(!items.length){
+    box.textContent = "Aucune donnée disponible.";
+    return;
+  }
+  items.forEach((p,i)=>box.appendChild(playerRow(p,i,rank)));
+}
+
+function renderRankings(){
+  const priced = market.filter(p=>Number(p.price)>0 && variation(p)!==null);
+  const drops = [...priced].filter(p=>variation(p)<0)
+    .sort((a,b)=>variation(a)-variation(b));
+  const rises = [...priced].filter(p=>variation(p)>0)
+    .sort((a,b)=>variation(b)-variation(a));
+
+  renderList("topDrops",drops.slice(0,5),true);
+  renderList("topRises",rises.slice(0,5),true);
+  renderList("allDrops",drops,true);
+  renderList("allRises",rises,true);
+}
+
+function searchPlayers(){
+  const q = normalize($("searchInput").value);
+  const results = market.filter(p=>normalize(p.name).includes(q));
+  renderList("searchResults",q ? results.slice(0,50) : []);
+}
+
+$("searchInput").addEventListener("keydown",e=>{
+  if(e.key==="Enter") searchPlayers();
+});
+
+function isFavorite(p){
+  return favorites.some(f=>String(f.eaId)===String(p.eaId));
+}
+
+function toggleFavorite(p){
+  if(isFavorite(p)){
+    favorites = favorites.filter(f=>String(f.eaId)!==String(p.eaId));
+  }else{
+    favorites.push({
+      eaId:p.eaId,
+      name:p.name
+    });
+  }
+  saveFavorites();
+}
+
+function saveFavorites(){
+  localStorage.setItem("fc27favorites",JSON.stringify(favorites));
+  $("favoriteCount").textContent = favorites.length;
+  renderFavorites();
+  renderRankings();
+}
+
+function renderFavorites(){
+  const current = favorites.map(f=>
+    market.find(p=>String(p.eaId)===String(f.eaId)) ||
+    market.find(p=>normalize(p.name)===normalize(f.name))
+  ).filter(Boolean);
+
+  renderList("favoriteList",current);
+  renderList("homeFavorites",current.slice(0,5));
+}
+
+function showTab(id,button){
+  document.querySelectorAll("body > section").forEach(s=>s.classList.add("hidden"));
+  $(id).classList.remove("hidden");
+  document.querySelectorAll(".tabs button").forEach(b=>b.classList.remove("active"));
+  if(button) button.classList.add("active");
+}
+
+function openDetails(p){
+  currentPlayer = p;
+  previousTab = [...document.querySelectorAll("body > section")]
+    .find(s=>!s.classList.contains("hidden"))?.id || "home";
+
+  document.querySelectorAll("body > section").forEach(s=>s.classList.add("hidden"));
+  $("details").classList.remove("hidden");
+
+  const forecast = p.forecast;
+  let forecastText = "Aucune prévision disponible.";
+  if(Array.isArray(forecast) && forecast.length){
+    forecastText = forecast.map(x=>
+      typeof x === "object" ? JSON.stringify(x) : String(x)
+    ).join(" • ");
+  }else if(forecast !== undefined && forecast !== null){
+    forecastText = typeof forecast === "object"
+      ? JSON.stringify(forecast) : String(forecast);
+  }
+
+  $("playerDetails").innerHTML =
+    "<h2>" + esc(p.name) + "</h2>" +
+    (p.image ? '<img src="' + esc(p.image) +
+      '" alt="" style="width:140px;max-height:190px;object-fit:contain">' : "") +
+    '<div class="stats">' +
+    '<div class="stat">Note<strong>' + esc(p.rating ?? "—") + '</strong></div>' +
+    '<div class="stat">Prix actuel<strong class="price">' +
+      money(p.price) + '</strong></div>' +
+    '<div class="stat">Variation 7 jours<strong>' +
+      variationHTML(p) + '</strong></div>' +
+    '<div class="stat">Signal<strong>' + signalHTML(p) + '</strong></div>' +
+    '</div><hr><h3>🔮 Prévisions API</h3><p>' +
+    esc(forecastText) + '</p>' +
+    '<h3>📊 Historique des prix</h3>' +
+    '<p id="historyStatus" class="muted">Chargement de l’historique...</p>' +
+    '<canvas id="historyChart" width="700" height="300"></canvas>' +
+    '<button onclick="toggleFavorite(currentPlayer)">☆ Ajouter / retirer des favoris</button>';
+
+  loadHistory(p);
+}
+
+function backFromDetails(){
+  $("details").classList.add("hidden");
+  $(previousTab).classList.remove("hidden");
+}
+
+async function loadHistory(p){
+  const status = $("historyStatus");
+  const canvas = $("historyChart");
+  if(!p.eaId){
+    status.textContent = "Identifiant du joueur indisponible.";
+    return;
+  }
+
+  try{
+    const response = await fetch(API + "/history/" + encodeURIComponent(p.eaId));
+    if(!response.ok) throw new Error("Historique indisponible");
+    const data = await response.json();
+
+    if(!Array.isArray(data.p) || !data.p.length){
+      status.textContent = "Aucun historique de prix disponible.";
+      return;
+    }
+
+    status.textContent = data.p.length + " relevés de prix disponibles.";
+    drawChart(canvas,data.p);
+  }catch(e){
+    status.textContent = "Historique non accessible pour ce joueur.";
+  }
+}
+
+function drawChart(canvas,values){
+  const ctx = canvas.getContext("2d");
+  const w=canvas.width,h=canvas.height;
+  ctx.clearRect(0,0,w,h);
+
+  const nums=values.map(Number).filter(Number.isFinite);
+  if(nums.length<2) return;
+
+  const min=Math.min(...nums),max=Math.max(...nums);
+  const range=max-min || 1;
+  const pad=35;
+
+  ctx.strokeStyle="#40516a";
+  ctx.lineWidth=1;
+  for(let i=0;i<5;i++){
+    const y=pad+(h-pad*2)*i/4;
+    ctx.beginPath();ctx.moveTo(pad,y);ctx.lineTo(w-pad,y);ctx.stroke();
+  }
+
+  ctx.strokeStyle="#55e6a5";
+  ctx.lineWidth=4;
+  ctx.beginPath();
+  nums.forEach((v,i)=>{
+    const x=pad+(w-pad*2)*i/(nums.length-1);
+    const y=h-pad-(v-min)/range*(h-pad*2);
+    if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+  });
+  ctx.stroke();
+
+  ctx.fillStyle="#aab7c9";
+  ctx.font="18px Arial";
+  ctx.fillText(money(max),pad,22);
+  ctx.fillText(money(min),pad,h-5);
+}
+
+function calculateProfit(){
+  const buy=Number($("buyPrice").value);
+  const sell=Number($("sellPrice").value);
+  const box=$("profitResult");
+
+  if(buy<=0 || sell<=0){
+    box.textContent="Entre deux prix valides.";
+    return;
+  }
+
+  // Taxe de vente Ultimate Team estimée à 5 %
+  const net=Math.floor(sell*0.95);
+  const profit=net-buy;
+  const roi=profit/buy*100;
+
+  box.innerHTML =
+    '<div class="stats">' +
+    '<div class="stat">Revente après taxe<strong>' + money(net) + '</strong></div>' +
+    '<div class="stat">Bénéfice estimé<strong class="' +
+      (profit>=0?"green":"red") + '">' + money(profit) + '</strong></div>' +
+    '<div class="stat">Rentabilité<strong>' +
+      roi.toFixed(2).replace(".",",") + '%</strong></div>' +
+    '<div class="stat">Taxe estimée<strong>' + money(sell-net) + '</strong></div>' +
+    '</div><p class="muted">Calcul indicatif avec une taxe de vente de 5 %.</p>';
+}
+
+renderFavorites();
 loadMarket();
 </script>
-
 </body>
 </html>
